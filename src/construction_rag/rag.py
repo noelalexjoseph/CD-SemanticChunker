@@ -119,7 +119,8 @@ class ConstructionDrawingRAG:
                     "bbox_y1": c.bbox.y1,
                     "bbox_x2": c.bbox.x2,
                     "bbox_y2": c.bbox.y2,
-                    "content": c.content[:1000],  # Store truncated content in metadata
+                    "content": c.content[:2000],  # Store content in metadata (increased limit)
+                    "full_content": c.content,  # Store full content for Q&A context
                     "summary": c.summary or ""
                 }
                 for c in batch
@@ -188,10 +189,13 @@ class ConstructionDrawingRAG:
         query_results = []
         if results['ids'] and results['ids'][0]:
             for i in range(len(results['ids'][0])):
+                meta = results['metadatas'][0][i]
+                # Use full_content for Q&A context, fallback to content or document
+                content = meta.get('full_content', meta.get('content', results['documents'][0][i]))
                 query_results.append(QueryResult(
                     chunk_id=results['ids'][0][i],
-                    content=results['metadatas'][0][i].get('content', results['documents'][0][i]),
-                    metadata=results['metadatas'][0][i],
+                    content=content,
+                    metadata=meta,
                     distance=results['distances'][0][i],
                     relevance_score=1 - results['distances'][0][i]
                 ))
@@ -206,14 +210,27 @@ class ConstructionDrawingRAG:
             chunk_id: The chunk ID to retrieve
             
         Returns:
-            Dict with chunk data, or None if not found
+            Dict with chunk data compatible with Chunk.from_dict(), or None if not found
         """
         result = self.collection.get(ids=[chunk_id], include=["documents", "metadatas"])
         if result['ids']:
+            meta = result['metadatas'][0]
             return {
                 "chunk_id": result['ids'][0],
-                "content": result['metadatas'][0].get('content', result['documents'][0]),
-                "metadata": result['metadatas'][0]
+                "chunk_type": meta.get("chunk_type", "text"),
+                "content": meta.get('content', result['documents'][0]),
+                "confidence": meta.get("confidence", 0.9),
+                "bbox": {
+                    "x1": meta.get("bbox_x1", 0),
+                    "y1": meta.get("bbox_y1", 0),
+                    "x2": meta.get("bbox_x2", 1),
+                    "y2": meta.get("bbox_y2", 1)
+                },
+                "metadata": {
+                    "source_image": meta.get("source_image", ""),
+                    "page_title": meta.get("page_title", ""),
+                },
+                "summary": meta.get("summary")
             }
         return None
     

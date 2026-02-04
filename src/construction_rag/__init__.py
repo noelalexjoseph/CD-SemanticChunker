@@ -46,7 +46,7 @@ __author__ = "Joseph Noel"
 from .pipeline import ConstructionRAGPipeline
 
 # Individual components
-from .chunker import ConstructionDrawingChunker, cluster_text_blocks
+from .chunker import ConstructionDrawingChunker, RawChunk
 from .rag import ConstructionDrawingRAG
 from .llm import OpenRouterLLM, generate_summaries_for_chunks
 
@@ -65,6 +65,21 @@ from .utils import (
     classify_chunk_by_position
 )
 
+# Visualization
+from .visualization import (
+    draw_bounding_boxes,
+    create_chunk_legend,
+    crop_chunk_region,
+    display_chunk_with_summary
+)
+
+# Evaluation
+from .evaluation import (
+    BatchEvaluator,
+    ImageResult,
+    DatasetStats
+)
+
 __all__ = [
     # Version
     "__version__",
@@ -78,12 +93,25 @@ __all__ = [
     "ConstructionDrawingRAG",
     "OpenRouterLLM",
     
+    # Data classes
+    "RawChunk",
+    
     # Functions
-    "cluster_text_blocks",
     "generate_summaries_for_chunks",
     "merge_bboxes",
     "bbox_distance",
     "classify_chunk_by_position",
+    
+    # Visualization
+    "draw_bounding_boxes",
+    "create_chunk_legend",
+    "crop_chunk_region",
+    "display_chunk_with_summary",
+    
+    # Evaluation
+    "BatchEvaluator",
+    "ImageResult",
+    "DatasetStats",
     
     # Data models
     "Chunk",

@@ -172,17 +172,25 @@ Summary:"""
         """
         context_text = "\n\n---\n\n".join(contexts[:5])  # Limit to 5 chunks
         
-        prompt = f"""You are answering questions about construction drawings and documents.
-Use ONLY the provided context to answer. If the answer isn't in the context, say "Not found in documents."
+        prompt = f"""You are an expert at extracting information from construction drawing documents.
+The context below contains text extracted from construction drawings using OCR, which may have some noise or formatting issues.
 
-Context:
-{context_text[:3000]}
+Your task: Answer the question based on the provided context. Look for relevant information even if the text has minor OCR errors or unusual formatting.
+
+Context from construction drawings:
+{context_text[:4000]}
 
 Question: {query}
 
+Instructions:
+- Extract relevant information from the context to answer the question
+- If the context contains partial or noisy text, interpret it reasonably
+- If you find relevant information, provide a clear answer
+- Only say "Not found in the provided documents" if there's truly no relevant information
+
 Answer:"""
         
-        return self.generate(prompt, max_tokens=300, temperature=0.3)
+        return self.generate(prompt, max_tokens=400, temperature=0.3)
     
     def extract_page_title(self, chunk_summaries: List[str]) -> str:
         """

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "construction-rag"
-version = "0.1.0"
+version = "0.1.1"
 description = "Open-source library for transforming construction drawings into searchable chunks for RAG-based retrieval systems"
 readme = "README.md"
 license = {text = "MIT"}
@@ -43,6 +43,8 @@ dependencies = [
     "scikit-learn>=1.0.0",
     "numpy>=1.20.0",
     "openai>=1.0.0",
+    "pillow>=10.0.0",
+    "matplotlib>=3.5.0",
 ]
 
 [project.optional-dependencies]

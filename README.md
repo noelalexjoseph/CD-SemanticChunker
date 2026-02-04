@@ -2,6 +2,12 @@
 
 Open-source Python library for transforming construction drawings into searchable chunks for Retrieval-Augmented Generation (RAG) systems.
 
+## Documentation
+
+- **[Comprehensive Guide](docs/guide.md)** - Detailed explanation of the library, modules, and algorithms
+- **[API Reference](docs/api.md)** - Complete API documentation
+- **[Architecture](docs/architecture.md)** - System design and data flow
+
 ## About This Project
 
 This library was developed as part of the Master's thesis:
@@ -144,43 +150,40 @@ export OPENROUTER_API_KEY="your-api-key"
 | `cluster_min_samples` | `2` | Min samples per cluster |
 | `title_block_threshold` | `0.85` | X position for title block |
 
-## Architecture
+## How It Works
+
+The library processes construction drawings through a five-stage pipeline:
 
 ```
-┌─────────────────┐
-│ Construction    │
-│ Drawing (Image) │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  IBM Docling    │  Document parsing
-│  Layout Parser  │  (tables, text, figures)
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ DBSCAN Spatial  │  548 text blocks
-│   Clustering    │  → 98 semantic clusters
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  GPT-4o-mini    │  Human-readable
-│  Summarization  │  chunk summaries
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   ChromaDB      │  all-MiniLM-L6-v2
-│  Vector Store   │  embeddings (384-dim)
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Semantic Query  │  Natural language
-│   Interface     │  retrieval
-└─────────────────┘
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   INPUT     │    │   DOCLING   │    │   DBSCAN    │    │     LLM     │    │  CHROMADB   │
+│  (Image)    │ -> │  (Parsing)  │ -> │ (Clustering)│ -> │ (Summaries) │ -> │  (Storage)  │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+```
+
+1. **Input**: Construction drawing image (JPG, PNG)
+2. **Docling**: IBM Docling extracts texts, tables, and figures with bounding boxes
+3. **DBSCAN**: Spatial clustering groups 548 granular text blocks into 98 semantic clusters
+4. **LLM**: GPT-4o-mini generates human-readable summaries for noisy OCR text
+5. **ChromaDB**: Chunks are embedded and stored for semantic search
+
+For detailed explanation, see the [Comprehensive Guide](docs/guide.md).
+
+## Library Structure
+
+```
+construction-rag/
+├── src/construction_rag/    # The library (pip installable)
+│   ├── pipeline.py          # High-level unified API
+│   ├── chunker.py           # Document parsing + DBSCAN clustering
+│   ├── rag.py               # Vector storage + semantic retrieval
+│   ├── llm.py               # LLM integration (OpenRouter)
+│   ├── models.py            # Data structures (Chunk, BoundingBox)
+│   ├── visualization.py     # Matplotlib plotting utilities
+│   └── evaluation.py        # Batch evaluation with statistics
+├── examples/                 # Demo notebooks and scripts
+├── evaluation/               # RAGAS evaluation framework
+└── docs/                     # Documentation
 ```
 
 ## Evaluation Results
@@ -269,6 +272,17 @@ evaluator = RAGEvaluator(rag)
 results = evaluator.evaluate_all(TEST_CASES)
 print(f"F1 Score: {results['aggregate_metrics']['f1_score']:.2%}")
 ```
+
+## Examples
+
+The `examples/` directory contains notebooks and scripts demonstrating library usage:
+
+| Example | Description |
+|---------|-------------|
+| [01_basic_usage.ipynb](examples/01_basic_usage.ipynb) | Getting started tutorial - process images, run queries |
+| [02_full_pipeline.ipynb](examples/02_full_pipeline.ipynb) | Complete workflow with visualization and Q&A |
+| [03_evaluation.ipynb](examples/03_evaluation.ipynb) | Quality assessment with RAGAS metrics |
+| [run_full_pipeline.py](examples/run_full_pipeline.py) | Command-line script for automated testing |
 
 ## Citation
 

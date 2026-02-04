@@ -16,7 +16,7 @@ Example:
 
 import os
 import time
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Tuple
 from pathlib import Path
 
 from .models import Chunk, ProcessingResult, QueryResult
@@ -203,8 +203,9 @@ class ConstructionRAGPipeline:
     def ask(
         self,
         question: str,
-        n_context: int = 5
-    ) -> str:
+        n_context: int = 5,
+        return_context: bool = False
+    ) -> Union[str, Tuple[str, List[Chunk]]]:
         """
         Ask a question and get an LLM-generated answer.
         
@@ -214,9 +215,10 @@ class ConstructionRAGPipeline:
         Args:
             question: Natural language question
             n_context: Number of context chunks to retrieve
+            return_context: If True, return (answer, context_chunks) tuple
         
         Returns:
-            Generated answer string
+            Generated answer string, or (answer, context_chunks) if return_context=True
         
         Raises:
             ValueError: If LLM is not available
@@ -228,13 +230,44 @@ class ConstructionRAGPipeline:
         results = self.query(question, n_results=n_context)
         
         if not results:
-            return "No relevant content found in the indexed documents."
+            answer = "No relevant content found in the indexed documents."
+            if return_context:
+                return answer, []
+            return answer
         
-        # Get context from results
-        contexts = [r.content for r in results]
+        # Get context from results - include both summary and content for better answers
+        contexts = []
+        for r in results:
+            # Build rich context with summary and content
+            summary = r.metadata.get('summary', '')
+            content = r.content
+            chunk_type = r.metadata.get('chunk_type', 'text')
+            source = r.metadata.get('source_image', 'Unknown')
+            
+            # Create structured context
+            ctx_parts = [f"[{chunk_type.upper()} from {source}]"]
+            if summary:
+                ctx_parts.append(f"Summary: {summary}")
+            if content and content != summary:
+                ctx_parts.append(f"Content: {content}")
+            
+            contexts.append("\n".join(ctx_parts))
         
         # Generate answer
-        return self.llm.answer_query(question, contexts)
+        answer = self.llm.answer_query(question, contexts)
+        
+        # Return with context chunks if requested
+        if return_context:
+            # Retrieve full chunk objects from the RAG store
+            context_chunks = []
+            for r in results:
+                chunk_data = self.rag.get_chunk_by_id(r.chunk_id)
+                if chunk_data:
+                    chunk = Chunk.from_dict(chunk_data)
+                    context_chunks.append(chunk)
+            return answer, context_chunks
+        
+        return answer
     
     def get_stats(self) -> Dict:
         """

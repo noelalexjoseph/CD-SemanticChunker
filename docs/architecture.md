@@ -1,5 +1,7 @@
 # Architecture
 
+For a comprehensive explanation of the library including usage examples and module details, see the [Comprehensive Guide](guide.md).
+
 ## System Overview
 
 Construction RAG processes construction drawings through a five-stage pipeline:
@@ -52,9 +54,36 @@ IBM Docling provides document layout detection using:
 Docling produces highly granular text output (~548 blocks per drawing).
 DBSCAN groups spatially proximate blocks into semantic regions.
 
+**Two-Step Pipeline:**
+
+The chunker implements a two-step approach matching the thesis experiments:
+
+1. **Step 1 - Raw Extraction** (`extract_raw_chunks()`):
+   - Run Docling on the image
+   - Extract texts, tables, pictures with bounding boxes
+   - Apply Y-coordinate fix (PDF coords to image coords)
+   - Store as `RawChunk` objects with pixel coordinates
+
+2. **Step 2 - Clustering** (`cluster_and_finalize()`):
+   - Normalize coordinates to 0-1 range for clustering
+   - Run DBSCAN on text block centroids
+   - Merge content and bounding boxes for each cluster
+   - Classify chunks by position (title_block, notes, text)
+
 **Parameters:**
 - `eps=0.02`: ~2% of page dimensions
 - `min_samples=2`: Allows pairs and larger groups
+
+**Noise Point Handling:**
+
+DBSCAN labels isolated points as noise (label=-1). The library treats each noise point as its own cluster to prevent unrelated isolated text from being grouped together:
+
+```python
+for i, label in enumerate(labels):
+    if label == -1:
+        label = f"noise_{i}"  # Each noise point becomes its own cluster
+    clusters[label].append(text_chunks[i])
+```
 
 **Results:**
 - Input: 548 text blocks
@@ -149,3 +178,50 @@ construction_rag/
 | F1 Score | 66.1% |
 | Chunk reduction | 5.6× |
 | Embedding dimension | 384 |
+
+## Key Implementation Details
+
+### Y-Coordinate Inversion
+
+IBM Docling uses PDF coordinate system where Y=0 is at the bottom. The library inverts this to image coordinates (Y=0 at top):
+
+```python
+# PDF coordinates from Docling
+pdf_top = bbox.t      # Larger Y value in PDF
+pdf_bottom = bbox.b   # Smaller Y value in PDF
+
+# Convert to image coordinates
+image_y1 = img_height - pdf_top     # Top of box in image
+image_y2 = img_height - pdf_bottom  # Bottom of box in image
+```
+
+**Location:** `chunker.py`, method `extract_raw_chunks()`
+
+### Chunk Type Classification
+
+Chunks are classified based on their position on the page:
+
+| Type | Condition | Description |
+|------|-----------|-------------|
+| `title_block` | X center > 0.85 | Rightmost 15% of page |
+| `notes` | Y center > 0.85 | Bottom 15% of page |
+| `text` | Default | General text content |
+| `table` | Docling detection | Tabular data |
+| `viewport` | Docling detection, area > 0.1 | Large figures |
+| `figure` | Docling detection, area <= 0.1 | Small figures |
+
+### Embedding Strategy
+
+The RAG component uses summaries (when available) for embedding, with fallback to raw content:
+
+```python
+# Embedding priority
+documents = [c.summary or c.content for c in chunks]
+```
+
+This improves retrieval quality because summaries are cleaner than noisy OCR text.
+
+## See Also
+
+- [Comprehensive Guide](guide.md) - Detailed usage and module reference
+- [API Reference](api.md) - Complete API documentation
