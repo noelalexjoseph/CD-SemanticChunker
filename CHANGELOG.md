@@ -2,6 +2,37 @@
 
 All notable changes to the construction-rag library.
 
+## [0.1.2] - 2026-02-03
+
+### Added
+
+- **Comprehensive documentation** - New `docs/guide.md` with detailed explanations of:
+  - Library structure and how it works as a pip-installable package
+  - Five-stage processing pipeline with diagrams
+  - Module-by-module reference with code examples
+  - Key algorithms (DBSCAN, Y-coordinate fix, noise handling)
+  - Configuration reference and troubleshooting guide
+
+- **Improved README** - Added documentation links, "How It Works" section, library structure overview, and examples table
+
+- **Enhanced architecture docs** - Added two-step pipeline explanation, noise point handling, Y-coordinate inversion details, and chunk type classification table
+
+### Fixed
+
+- **DBSCAN noise point handling** - Each noise point (label=-1) is now treated as its own cluster instead of grouping all noise together. This prevents unrelated isolated text blocks from being merged.
+
+- **Q&A context improvements** - Enhanced the `ask()` method to provide richer context to the LLM including chunk type, source, summary, and full content.
+
+- **Full content storage** - RAG now stores full chunk content for Q&A, not just truncated content.
+
+- **Improved LLM prompt** - Better prompt for answering questions that handles noisy OCR text more gracefully.
+
+### Changed
+
+- **Evaluation module** - Added `BatchEvaluator`, `ImageResult`, and `DatasetStats` classes for statistical validation with 95% confidence intervals.
+
+- **Process Docling output** - Added `process_docling_output()` method to `ConstructionDrawingChunker` for processing pre-extracted Docling JSON.
+
 ## [0.1.1] - 2026-02-03
 
 ### Fixed
